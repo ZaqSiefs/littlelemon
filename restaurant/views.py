@@ -33,9 +33,3 @@ class BookingView(viewsets.ModelViewSet):
     queryset = model.objects.all()
     serializer_class = BookingSerializer
     permission_classes = [IsAuthenticated]
-
-# class SingleBookingView(RetrieveUpdateDestroyAPIView):
-#     model = Booking
-#     queryset = model.objects.all()
-#     serializer_class = BookingSerializer
-#     permission_classes = [IsAuthenticated]
