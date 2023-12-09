@@ -110,6 +110,10 @@ figure {
     margin: 0;
 }
 
+figure figcaption {
+    text-align: center;
+}
+
 label {
     font-weight: bold;
     display: block;
