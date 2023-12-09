@@ -1,9 +1,32 @@
 from django.shortcuts import render
-from django.urls import reverse
 from django.utils import timezone
-from django.views.generic.edit import FormView
+from django.urls import reverse
+from django.views import View
+
 from .forms import BookingForm
-import json, requests
+
+import requests, json
+
+import environ
+
+env = environ.Env()
+environ.Env.read_env()
+
+
+def get_token():
+    url = 'http://127.0.0.1:8000/api/token/login/'
+    data = {
+        'username': env('USERNAME'),
+        'password': env('PASSWORD')
+    }
+    response = requests.post(url, data=data)
+    response_dict = json.loads(response.text)
+    return response_dict.get('access')
+
+def get_auth_header():
+    token =get_token()
+    return {'Authorization': f'JWT {token}'}
+
 
 def index(request):
     return render(request, 'restaurant/index.html', {})
@@ -14,24 +37,27 @@ def about(request):
 
 
 def menu(request):
-    url = f"http://127.0.0.1:8000{reverse('api:menu-list')}"
-    response = requests.get(url)
-    return render(request, 'restaurant/menu.html', context={'menu_item': json.loads(response.text)})
+    url = f"http://127.0.0.1:8000{reverse('api:menu')}"
+    headers = get_auth_header()
+    response = requests.get(url, headers=headers)
+    return render(request, 'restaurant/menu.html', context={'menu_items': json.loads(response.text)})
 
 
 def menu_item(request, pk):
     url = f"http://127.0.0.1:8000{reverse('api:menu-detail', kwargs={'pk': pk})}"
-    response = requests.get(url)
+    headers = get_auth_header()
+    response = requests.get(url, headers=headers)
     return render(request, 'restaurant/menu_item.html', context={'menu_item': json.loads(response.text)})
 
 
-class Book(FormView):
+class Book(View):
     form_class = BookingForm
     template_name = 'restaurant/book.html'
 
     def get(self, request):
+        token = get_token()
         form = self.form_class()
-        return render(request, self.template_name, {'form': form})
+        return render(request, self.template_name, {'form': form, 'token': token})
 
     def get_data_from_form(self, form):
         data = {
@@ -42,15 +68,17 @@ class Book(FormView):
         return data
 
     def post(self, request):
+        token = get_token()
         form = self.form_class(request.POST)
         if form.is_valid():
             data = self.get_data_from_form(form)
-            url = f"http://127.0.0.1:8000{reverse('api:book-detail')}"
-            response = requests.post(url, data=data)
+            headers = get_auth_header()
+            url = f"http://127.0.0.1:8000{reverse('api:bookings')}"
+            response = requests.post(url, data=data, headers=headers)
             if response.status_code == 201:
-                context = {'form': BookingForm()}
+                context = {'form': BookingForm(), 'token': token}
                 return render(request, 'restaurant/book.html', context)
-        context = {'form': form}
+        context = {'form': form, 'token': token}
         return render(request, 'restaurant/book.html', )
 
 
@@ -59,6 +87,7 @@ def bookings(request):
         date = timezone.now().date()
     else:
         date = request.GET.get('date')
-    url = f"http://127.0.0.1:8000{reverse('api:bookings-list')}?date={date}"
-    response = requests.get(url)
+    url = f"http://127.0.0.1:8000{reverse('api:bookings')}?date={date}"
+    headers = get_auth_header()
+    response = requests.get(url, headers=headers)
     return render(request, 'restaurant/bookings.html', context={'bookings': response.text})

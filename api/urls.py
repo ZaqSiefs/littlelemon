@@ -13,6 +13,6 @@ bookings_router.register(r'bookings', views.BookingView)
 
 urlpatterns = [
     path('token-auth', obtain_auth_token, name='token-auth'),
-    path('', include(menu_router.urls)),
-    path('', include(bookings_router.urls)),
+    path('', include(menu_router.urls), name="menu"),
+    path('', include(bookings_router.urls), name="bookings"),
 ]
